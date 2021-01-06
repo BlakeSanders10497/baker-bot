@@ -7,6 +7,7 @@ from datetime import datetime
 import os.path
 
 import Leaderboard #mine
+import GuessingGame
 
 from os import path
 
@@ -53,11 +54,11 @@ async def on_ready():
 
 
 #after saying test in chat, the function picks a random response from the list above and awards the user those points
-def testRand(userName):
+def testRand(userFile):
     
-    completeName = os.path.join("User levels/", userName + ".txt")
+    completeName = os.path.join(userFile)
     
-    checkIfExists(completeName) #make sure user already has a file
+    #checkIfExists(completeName) #make sure user already has a file
     
     
     file = open(completeName, "r")
@@ -91,6 +92,7 @@ def testRand(userName):
     file.write(str(int(points) + int(reward))) #write updated user's points
     file.close()
     
+    '''
     completeName = os.path.join("Other files/", "test count.txt")
     file = open(completeName, "r")
     count = int(file.readline())
@@ -99,7 +101,8 @@ def testRand(userName):
     file = open(completeName, "w")
     file.write(str(count))
     file.close()
-    
+    '''
+
     return status
 
 
@@ -1317,11 +1320,16 @@ def readGuess(user, guess):
 
 
 
-def guessGameLB():
-    userListPath = os.path.join("Other files/", "guessing game user list.txt")
-    checkUserTicketFile(userListPath)
-    usersListFile = open(userListPath, "r")
+async def testFunction(message):
+
+    await message.channel.send(f"{message.author}: {message.author.name}: {message.content}")
     
+
+def getUserPath(user):
+    UserDataFolder = "User data (old)/"
+    fileExt = ".txt"
+
+    return UserDataFolder + user.author + fileExt
 
 
 
@@ -1334,30 +1342,24 @@ async def lobby(ctx, *, a: custTimer):
 
 @bot.event
 async def on_message(message):  # event that happens per any message.
-        
+    
+
     print(f"{message.channel}: {message.author}: {message.author.name}: {message.content}")
+
+    if str(message.author) == "hoody#9652" and "!!test" in message.content.lower():
+        await testFunction(message)
 
     #reset cooldowns for all users (only for my account)
     if str(message.author) == "hoody#9652" and "!!resetcooldown" in message.content.lower():
         resetTime()
 
-    #schedule a time for the bot to ping Among us role in x hours
-    if str(message.author) == "hoody#9652" and "start lobby" in message.content.lower():
-        msg = message.content.split()
-        if (int(msg[2]) == 1):
-            await message.channel.send('lobby starts in ' + msg[2] + ' hour')
-            await message.channel.send("<@&747923936829898952> " + custTimer(msg[2]))
-        else:
-            await message.channel.send('lobby starts in ' + msg[2] + ' hours')
-            await message.channel.send("<@&747923936829898952> " + custTimer(msg[2]))
-
 
     #BAKE
     if  str(message.author) != "The Baker#0723" and str(message.channel) == "bakery" and str(message.content) != "!bakecount" and "bake" in message.content.lower():
-        if (checkTime(message.author)):
-            await message.channel.send(testRand(str(message.author)))
-        else:
-            await message.channel.send("you already baked :)")
+        #if (checkTime(message.author)):
+        await message.channel.send(testRand(getUserPath(message)))
+        #else:
+        #    await message.channel.send("you already baked :)")
 
     #check points
     if str(message.author) != "The Baker#0723" and str(message.channel) == "bakery" and "!bread" in message.content.lower():
@@ -1534,20 +1536,25 @@ async def on_message(message):  # event that happens per any message.
                 
     #start the guess game
     if str(message.channel) == "bakery" and str(message.content).lower() == "start guessing":
-        await message.channel.send(startGuessGame(str(message.author)))
-
+        await message.channel.send(GuessingGame.startGuessGame(message, getUserPath(message)))
+    
     #read a user's guess
     if str(message.channel) == "bakery":
-        gameStatusPath = os.path.join("User levels/", str(message.author) + " guess game status.txt")
-        if (checkIfGuessGameActive(gameStatusPath) == "true"):
+        gameStatusPath = os.path.join(UserDataFolder + str(message.author) + " guess game status" + fileExt)
+        if (GuessingGame.checkIfGuessGameActive(gameStatusPath) == "true"):
             try:
                 number = int(message.content)
             except:
                 print("failed to parse messange.content into int")
             try:    
-                await message.channel.send(readGuess(str(message.author), number))
+                await message.channel.send(GuessingGame.readGuess(str(message.author), number))
             except:
                 print("not a guess")
+    
+
+
+
+
 
 
     if str(message.channel) == "bakery" and str(message.content) == "tesst":
@@ -1562,8 +1569,16 @@ async def on_message(message):  # event that happens per any message.
 
     if  str(message.channel) == "bakery" and str(message.content.lower()) == "test lb":
         await message.channel.send(file=discord.File(Leaderboard.leaderboard("User levels/", ",List of Account names.txt", ".txt", "bread")))
-        
-bot.run('NDE2NDQ3NDQ3NTE1MjY3MDcy.Wo-U6A.4bdNVXI2GeGIDhtHpoVzYHdQkB0')
+       
+
+
+
+tokenPath = os.path.join("token.txt")
+file = open(tokenPath, "r")
+token = file.readline()
+file.close()
+
+bot.run(token)
 
 
 
