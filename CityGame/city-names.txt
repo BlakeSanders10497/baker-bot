@@ -1,0 +1,50 @@
+Amsterdam, Netherlands
+Barcelona, Spain
+Beijing, China
+Beirut, Lebanon
+Bergen, Norway
+Bruges, Belgium
+Budapest, Hungary
+Buenos Aires, Argentina
+Cape Town, South Africa
+Cartagena, Colombia
+Chefchaouen, Morocco
+Chiang Mai, Thailand
+Copenhagen, Denmark
+Cusco, Peru
+Doha, Qatar
+Dubrovnik, Croatia
+Edinburgh, Scotland
+Florence, Italy
+Havana, Cuba
+Hanoi, Vietnam
+Hong Kong, China
+Istanbul, Turkey
+Jaipur, India
+Jerusalem, Israel
+Kyoto, Japan
+Ljubljana, Slovenia
+London, U.K.
+Luang Prabang, Laos
+Muscat, Oman
+New York, New York
+Paris, France
+Porto, Portugal
+Prague, Czech Republic
+Québec City, Canada
+Queenstown, New Zealand
+Quito, Ecuador
+Rio de Janeiro, Brazil
+Rome, Italy
+St Petersburg, Russia
+San Francisco, California
+San Miguel de Allende, Mexico
+Seoul, South Korea
+Seville, Spain
+Singapore
+Sydney, Australia
+Tallinn, Estonia
+Valletta, Malta
+Venice, Italy
+Vienna, Austria
+Zurich, Switzerland

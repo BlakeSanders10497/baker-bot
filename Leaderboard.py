@@ -3,92 +3,84 @@ import matplotlib.pyplot as plt
 import time
 from os import path
 
-def leaderboard(folder, listFile, userFileExt, leaderboardType):
-    completeName = os.path.join(folder, listFile)
-    file = open(completeName, "r")
-    userList = []
-    userList = file.readline().split(',') #list of each user's name that has bread
-    file.close()
+import DatabaseOperations
 
-    pointsList = getUserPointsList(userList, userFileExt) #list of each user's points
 
+def makeLeaderboard(leaderboardType, savePath):
+    pointsList, nameList = getListData(leaderboardType)
+ 
     temp = 0
     tempName = ""
 
     #insertion sort algorithm
-    for i in range(0, len(userList)):
+    for i in range(0, len(pointsList)):
         j = i
         
         while (j > 0 and pointsList[j] < pointsList[j - 1]): #if the number before the current number is lower, true
             temp = pointsList[j]
-            tempName = userList[j]
+            tempName = nameList[j]
 
             #swap numeric values
             pointsList[j] = pointsList[j - 1]
             pointsList[j - 1] = temp
 
             #swap names so that the indicies of each list (name and points) match
-            userList[j] = userList[j - 1]
-            userList[j - 1] = tempName
+            nameList[j] = nameList[j - 1]
+            nameList[j - 1] = tempName
             
             j -= 1
             
         i += 1
 
-
     plt.style.use("ggplot")
+    plt.cla() #clear plot so it doesnt overlap with previous plot
     
-    breads = []
+    value = []
     xLabel = ""
+    logStatus = False
     if (leaderboardType == "bread"):
         for j in range(0, len(pointsList)):
-            breads.append(len(str(pointsList[j])) - 1)
-        xLabel = "Amount of bread (10^x)"
-        
-    elif (leaderboardType == "guessing game"):
+            value.append(int(pointsList[j]))
+        xLabel = "Bread"
+        lbColor = 'blue'
+        logStatus = True
+    elif (leaderboardType == "gg wins"):
         for j in range(0, len(pointsList)):
-            breads.append(pointsList[j])
-        xLabel = "Wins in Guessing Game"   
-    names = []
-    for k in range(0, len(userList)):
-        names.append(userList[k][:-5])
-
-    x_pos = [i for i, _ in enumerate(names)]
+            value.append(pointsList[j])
+        xLabel = "Wins in Guessing Game"
+        lbColor = 'red'
+        logStatus = False
+        
+    x_pos = [i for i, _ in enumerate(nameList)]
     
-    plt.barh(x_pos, breads, color = 'blue')
+    plt.barh(x_pos, value, color = lbColor, log = logStatus)
     plt.ylabel("Users")
     plt.xlabel(xLabel)
     plt.title("LEADERBOARD")
-    plt.yticks(x_pos, names)
-    plt.savefig('Other files/leaderboard.png', bbox_inches = 'tight', pad_inches = 0.1)
+    plt.yticks(x_pos, nameList)
+    plt.savefig(savePath, bbox_inches = 'tight', pad_inches = 0.1)
     
-    return 'Other files/leaderboard.png'
 
 
 
 
-def getUserPointsList(userList, userFileExt):
-    userPointsList = []
+def getListData(leaderboardType):
+    nameList = []
+    pointsList = []
+
+    with open('UserDatabase.txt', 'r') as file: #read the database file
+        data = file.readlines()
     
-    for count in range(0, len(userList)):
-        userPath = os.path.join("User levels/", userList[count] + "" + userFileExt)
-        checkIfFileExists(userPath)
-        userFile = open(userPath, "r")
-        userPoints = int(userFile.readline())
-        userPointsList.append(userPoints)
-        
+    for count in range(0, len(data) - 1):
+        userData = DatabaseOperations.convertToDict(data[count])
+        if (int(userData[leaderboardType]) > 0): #if the user has at least 1 win or bread, count them in
+            pointsList.append(int(userData[leaderboardType]))
+            if (userData['nickname'] == ""):
+                name = userData['name'][:-5]
+            else:
+                name = userData['nickname']
+            nameList.append(name) #add name to list and splice the tag out (e.g. #1111)
 
-    return userPointsList
+    return pointsList, nameList
 
 
-def checkIfFileExists(pathName):
-    exists = False
-    if (not path.exists(pathName)):
-        fileW = open(pathName, "w")
-        fileW.write("0")
-        fileW.close()
-        
-    else:
-        exists = True
-
-    return exists
