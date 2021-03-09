@@ -1,21 +1,21 @@
 import discord
 import DatabaseOperations
 import BreadBox
+import Utilities
 
-
-def store(user):
+async def store(user):
     userData = DatabaseOperations.getDataList(user)
     output = ""
     
-    if (int(userData['bread']) < 100):
+    if (userData['bread'] < 100):
         output = "you need at least 100 bread to shop at the store"
     else:
-        breadBoxPrice = int(userData['bread']) * 0.02
+        breadBoxPrice = userData['bread'] * 0.02
         butterPrice = 100
-        output = "```\t\t\tSTORE\n\n\tITEM\t\t\tPrice\n\n A1) Bread Box - ({:,}".format(int(breadBoxPrice)) + " bread)\n\n B2) Butter - ({:,}".format(butterPrice) + " bread)```"
+        output = "```fix\n\t\t\tSTORE\n\n\tITEM\t\t\tPrice\n\n A1) Bread Box - ({:,}".format(int(breadBoxPrice)) + " bread)\n\n B2) Butter    - ({:,}".format(butterPrice) + " bread)```"
 
-    
-    return output
+    embed = await Utilities.getEmbedMsg(body_text = output)
+    await user.channel.send(embed = embed)
 
         
     
@@ -24,42 +24,39 @@ async def storePurchase(user, item):
     msg = user.content.split()
     output = ""
 
-    try:
-        amount = int(msg[2])
-    except:
-        #await user.channel.send("```Error\nCorrect syntax: !buy ID AMOUNT```")
-        pass
-    
-    
-    if (int(userData['bread']) < 50):
-        output = "you need at least 100 bread to shop at the store"
+    if (userData['bread'] < 50):
+        output = "```fix\nyou need at least 50 bread to shop at the store```"
     else:
 
         if (item == "A1"): #bread box 
             if (not BreadBox.maxBreadBoxPurchases(user)):
-                price = int(userData['bread']) * 0.02
-                userData['bread'] = str(int(userData['bread']) - int(price)) + "\n" #cost is 10% of user's bread
-                userData['bread box'] = str(int(userData['bread box']) + 1) #add bread box to inventory
-                userData['bread box purchases'] = str(int(userData['bread box purchases']) + 1) #add 1 to user box purchases of the day
+                price = userData['bread'] * 0.02
+                userData['bread'] = userData['bread'] - int(price) #cost is 2% of user's bread
+                userData['bread box'] = userData['bread box'] + 1 #add bread box to inventory
+                userData['bread box purchases'] = userData['bread box purchases'] + 1 #add 1 to user box purchases of the day
     
-                output = "Purchased 1 bread box (-{:,}".format(int(price)) + ")"
+                output = "```fix\nPurchased 1 bread box (-{:,}".format(int(price)) + " bread)```"
                 
             else:
-                output = "you have reached your bread box daily limit"
+                output = "```fix\nyou have reached your bread box daily limit```"
 
-        elif (item == "B2"):
-            if (int(userData['butter purchases']) < 1):
+        elif (item == "B2"): #butter
+            if (userData['butter purchases'] < 1):
                 price = 100
-                userData['bread'] = str(int(userData['bread']) - int(price)) + "\n"
-                userData['butter'] = str(int(userData['butter']) + 1)
-                userData['butter purchases'] = str(int(userData['butter purchases']) + 1)
+                userData['bread'] = userData['bread'] - int(price)
+                userData['butter'] = userData['butter'] + 1
+                userData['butter purchases'] = userData['butter purchases'] + 1
 
-                output = "Purchased 1 stick of butter (-" + str(price) + ")"
+                output = "```fix\nPurchased 1 stick of butter (-" + str(price) + " bread)```"
             else:
-                output = "you reached your daily butter limit"
-
-        DatabaseOperations.writeToDB(userData)       
-    await user.channel.send(output)
+                output = "```fix\nyou reached your daily butter limit```"
+        else:
+            output = f"```fix\nCould not find item \"{item}\"```"
+            
+        DatabaseOperations.writeToDB(userData)
+    
+    embed = await Utilities.getEmbedMsg(body_text = output)
+    await user.channel.send(embed = embed)
     
     
     
@@ -71,8 +68,8 @@ async def getButterCount(user):
 
     output = ""
     
-    userButter = int(userData['butter'])
-    butterLife = int(userData['butter life'])
+    userButter = userData['butter']
+    butterLife = userData['butter life']
     butterLimit = 21
     if (userButter == 0):
         output = "You have no butter in your inventory"
@@ -83,19 +80,24 @@ async def getButterCount(user):
         output += "\nActive butter: " + str(butterLimit - butterLife) + " uses left"
     else:
         output += "\nno active butter"
-        
-    await user.channel.send(output)
+    
+    embed = await Utilities.getEmbedMsg(body_text = output)
+    await user.channel.send(embed = embed)
 
 
 async def useButter(user):
     userData = DatabaseOperations.getDataList(user)
-    print(userData)
-    if (int(userData['butter life']) > 0):
+    
+    if (userData['butter life'] > 0):
         response = "you already have butter active"
     else:
-        userData['butter'] = str(int(userData['butter']) - 1)
-        userData['butter life'] = '1'
-        response = "butter is now active for 20 bakes!"
-        DatabaseOperations.writeToDB(userData)
-        
-    await user.channel.send(response)
+        if (int(userData['butter']) > 0):
+            userData['butter'] = userData['butter'] - 1
+            userData['butter life'] = 1
+            response = "butter is now active for 20 bakes!"
+            DatabaseOperations.writeToDB(userData)
+        else:
+            response = "you dont have any butter"
+    
+    embed = await Utilities.getEmbedMsg(body_text = response)
+    await user.channel.send(embed = embed)

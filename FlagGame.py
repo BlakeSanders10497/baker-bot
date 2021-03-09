@@ -1,5 +1,3 @@
-import requests
-from bs4 import BeautifulSoup as bs
 import os
 import asyncio
 import random
@@ -7,29 +5,13 @@ import discord
 import DatabaseOperations
 import Utilities
 import time
+import ctypes
 
 async def startFlagGame(user, bot):
+    await user.channel.edit(slowmode_delay=3) #3 second slowmode
     
-    await user.channel.send("Loading Flag Game for " + str(user.author.name))
-
-    #url = 'https://unsplash.com/s/photos/flag'
-    urls = ['https://www.united-states-flag.com/world.html']
-
-
-    # download page for parsing
-    page = requests.get(urls[0])
-    soup = bs(page.text, 'html.parser')
-
-    # locate all elements with image tag
-    image_tags = soup.find_all('img')
-
-    #make a list of the city names
-    raw_title_tags = soup.find_all(class_="home-titles")
-    title_tags = []
-    for i in range(0, len(raw_title_tags)): 
-        title_tags.append(str(raw_title_tags[i])[24:-5])
-
-
+    with open("FlagGame/flag-names.txt", "r") as f:
+        title_tags = f.readlines()
     
 
     notFound = True
@@ -42,8 +24,14 @@ async def startFlagGame(user, bot):
             await user.channel.send(file=discord.File(imagePath))
             notFound = False
         except:
-            notFound = True
+            pass
 
+    
+    title_text = "Loading Flag Game for " + str(user.author.name)
+    body_text = ""
+    msg = await user.channel.send(embed = await Utilities.getEmbedMsg(title_text))
+    
+    
     options = []
     answerIndex = random.randint(0, 3) #select which index the answer will be in
 
@@ -63,38 +51,56 @@ async def startFlagGame(user, bot):
                 if (unused == True): #if there was no match in the options list, the option chosen is has not been picked yet
                     options.append(option) #add it to the options
                     flag = False #exit the loop so another random city can be picked
+                    
     
-    text = "```This flag belongs to... (15 seconds to answer)\n\nA) " + options[0] + "\nB) " + options[1] + "\nC) " + options[2] + "\nD) " + options[3] + "\n```"
-    #await user.channel.send(text)
-
-    msg = await user.channel.send(text)
     
     #add reactions to the message
-    await msg.add_reaction("🇦")
-    await msg.add_reaction("🇧")
-    await msg.add_reaction("🇨")
-    await msg.add_reaction("🇩")
-
-
-
+    await msg.add_reaction("🇦") # A
+    await msg.add_reaction("🇧") # B
+    await msg.add_reaction("🇨") # C
+    await msg.add_reaction("🇩") # D
+    
     userData = DatabaseOperations.getDataList(user)
-    userData['flaggame answer'] = str(answerIndex + 1)
+    userData['flaggame answer'] = answerIndex + 1
+    userData['flaggame played'] += 1
     DatabaseOperations.writeToDB(userData)
+
+    if (userData['nickname'] == ""):
+        name = str(user.author.name)
+    else:
+        name = userData['nickname']
+    
+    #create new embed message with body and title (list of options)
+    title_text = f"This flag belongs to... (25 seconds to answer)"
+    body_text = f"```\n\nA) {options[0]}B) {options[1]}C) {options[2]}D) {options[3]}```"
+    await msg.edit(embed = await Utilities.getEmbedMsg(title_text, body_text, user, userData))
 
     def check(reaction, userName):
         return userName == user.author
 
     try:
-        reaction, userName = await bot.wait_for('reaction_add', timeout=15.0, check=check)
-    except asyncio.TimeoutError:
-        await user.channel.send(f'<:Sadge:761225325723123732> {user.author.name} ran out of time to answer')
-    else:
-        await readAnswer(reaction.message, user.author, reaction.emoji)
+        reaction, userName = await bot.wait_for('reaction_add', timeout=25.0, check=check)
+    except asyncio.TimeoutError: #if user ran out of time
+        await user.channel.edit(slowmode_delay=0) #remove slowmode
+        
+        title_text = f":confused: you ran out of time to answer"
+        body_text = ""
+        await msg.edit(embed = await Utilities.getEmbedMsg(title_text, body_text, user, userData))
+
+    else: #if user answered with a reaction
+        await user.channel.edit(slowmode_delay=0) #remove slowmode on channel
+        
+        result = await readAnswer(reaction.message, user, reaction.emoji) #get result of their answer
+        body_text += "\n" + result #alter body text
+        await msg.edit(embed = await Utilities.getEmbedMsg(title_text, body_text, user, userData))
+
+
+
 
 
 async def readAnswer(message, user, reaction):
     char_list = ['A', 'B', 'C', 'D']
-    userData = DatabaseOperations.getUserList(user)
+    userData = DatabaseOperations.getDataList(user)
     
     if (str(reaction) == "🇦"):
         ans = 1
@@ -111,72 +117,25 @@ async def readAnswer(message, user, reaction):
         
 
     if (userData['nickname'] == ''):
-        name = user.name
+        name = str(user.author.name)
     else:
         name = userData['nickname']
     
     if (ans == int(userData['flaggame answer'])): #check if user answer is correct
         #add reward
-        userData['bread box'] = str(int(userData['bread box']) + 1)
-        response = "(" + name + ") <:PogU:771737926936559656> you win 1 bread box"
+        userData['bread box'] += 1
+        response = ":nerd: you win 1 bread box"
+        userData['flaggame wins'] += 1
     else:
-        response = "(" + name + ") <:FeelsWeirdMan:783529533206822942> the answer was " + char_list[int(userData['flaggame answer']) - 1]
+        response = ":no_entry_sign: the answer was " + char_list[userData['flaggame answer'] - 1]
 
     #reset game
-    userData['flaggame answer'] = '-1'
+    userData['flaggame answer'] = -1
     userData['flaggame cooldown'] = Utilities.getTime()
 
     DatabaseOperations.writeToDB(userData)
-            
-    await message.channel.send(response)
-
-
-
-
-
-
-
-
-
-
-
-    
-def downloadImages():
-    #2 websites where u can get images from
-    urls = ['https://www.cntraveler.com/galleries/2016-01-08/the-50-most-beautiful-cities-in-the-world',
-        'https://www.timeout.com/things-to-do/best-cities-in-the-world']
-
-    # download page for parsing
-    page = requests.get(urls[0])
-    soup = bs(page.text, 'html.parser')
-
-    # locate all elements with image tag
-    image_tags = soup.find_all('img')
-
-    # create directory for model images
-    if not os.path.exists('CityGame'):
-        os.makedirs('CityGame')
-
-    # move to new directory
-    os.chdir('images')
-
-    # image file name variable
-    x = 0
-    url = 0
-    # writing images
-    for image in image_tags:
-        try:
-            url = image['src']
-            response = requests.get(url)
-            if response.status_code == 200:
-                with open('cities-' + str(x) + '.jpg', 'wb') as f:
-                    f.write(requests.get(url).content)
-                    f.close()
-                    x += 1
-        except:
-            print("error")
-
-
+                
+    return response
 
 
 

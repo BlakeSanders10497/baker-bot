@@ -1,162 +1,187 @@
 import os.path
 import Utilities
+import json
+
+
+def getDatabase():
+    with open('util/Database.json', 'r') as file: #read the database file
+        data = json.load(file)
+    
+    return data
+
+def saveDatabase(data):
+    with open('util/Database.json', 'w') as file:
+        json.dump(data, file, indent = 4)
+
 
 def getDataList(user):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
-        
-    found = False #flag for whether the user is found in the database
-    for i in range(0, len(data)):
-        dataLine = convertToDict(data[i])
-        if (dataLine['id'] == str(user.author.id)): #check if the user who baked is in the database
-            userData = convertToDict(data[i])
-            found = True
-            
-    if (found == False): #user wasnt found in the database
+    """
+    Receive the user's dictionary by using their id as a key. If not found,
+    add a new dictionary to the database
+    
+    param: discord Message object
+    return: dictionary of user's data
+    """
+    data = getDatabase()
+    
+    try:
+        userData = data[str(user.author.id)]
+    except:
+        print("adding new user to database (error on DatabaseOperations.py line 28)")
         userData = addNewUser(user)
-        
+    
     return userData
 
 
-#take a dictionary and convert the values into a comma separated string
-def convertToString(userData):
-    strUserData = ""
-    index = 0
-    for value in userData.values():
-        if (index == len(userData) - 1):
-            strUserData += str(value)
-        else:
-            strUserData += str(value) + ","
-
-        index += 1
-
-    return strUserData
 
 
 #write the user's data to the database
 def writeToDB(userData):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
-
-    index = getIndex(userData)
-    strUserData = convertToString(userData) #convert user line to string
+    """
+    Write to the database by getting the location of the user's data, and overwriting their previous info
+    
+    Parameter: dictionary of a user's data
+    """
+    data = getDatabase()
     
     try:
-        data[index] = strUserData #save in the database list
+        data[str(userData['id'])] = userData #save in the database list
     except:
-        print("Error when placing strUserData line in data. index: " + str(index))
+        print("Error placing userData in database (DatabaseOperations line 48)")
 
 
-    with open('UserDatabase.txt', 'w') as file: #write it to the local file
-        file.writelines(data)
+    saveDatabase(data)
 
 
-#return the user's list of data. used only when you need to read data, not write
-def getUserList(user):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
     
-    userData = {}
-    found = False #flag for whether the user is found in the database
-    for i in range(0, len(data)):
-        dataLine = convertToDict(data[i])
-        if (str(dataLine['id']) == str(user.id)): #check if the user who baked is in the database
-            userData = convertToDict(data[i])
-            found = True
-
-    return userData
-    
-
-#get which line (index) the user's data is on in UserDatabase.txt 
-def getIndex(userData):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
-
-    index = 1000 #set the index high so it will raise an error if not found
-    for i in range(0, len(data) - 1):
-        dataLine = convertToDict(data[i]) #get ID of the current line
-        if (userData["id"] == dataLine['id']):
-            index = i
-            
-    return index
 
 
 #create a new line in the database file and add default information of a new user
 def addNewUser(user):
-    #create a string of default values (and user name and ID)
-    strUserData = ",".join(["", str(user.author), '0', '0', '0', '0', '0', '0', '0', '-10', 'false', '0', '0', "", '0', '-15', '-1', '-15', '-1', '-1', '0', '0', str(user.author.id), '0\n'])
+    """
+    Create a new spot in the database with default values for the new user. 
+    The user's id will be the key to access their dictionary
+    
+    param: discord Message object
+    returns the new user's data as a dict
+    """
+    userData = {"nickname":"",
+                "name":f"{user.author}",
+                "bread box purchases":0,
+                "bread box":0,
+                "butter":0,
+                "butter purchases":0,
+                "butter life":0,
+                "gg donations":0,
+                "gg avail guesses":0,
+                "gg cooldown":-10,
+                "gg answer":-1,
+                "gg played":0,
+                "gg wins":0,
+                "ticket list":"",
+                "num tickets":0,
+                "citygame cooldown":-15,
+                "citygame answer":-1,
+                "citygame played":0,
+                "citygame wins":0,
+                "flaggame cooldown":-10,
+                "flaggame answer":-1,
+                "flaggame played":0,
+                "flaggame wins":0,
+                "daily bakes":0,
+                "bakes":0,
+                "timeout":-1,
+                "id":user.author.id,
+                "bread":0}
+    
+    data = getDatabase()
 
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
+    data[str(user.author.id)] = userData
 
-    data.append(strUserData) #add to list of user data lines
-
-    with open('UserDatabase.txt', 'w') as file: #write it to the local file
-        file.writelines(data)
+    saveDatabase(data)
         
-        
-    userData = convertToDict(strUserData)
     
     return userData
 
 
-#convert a string with comma-separated values into a dictionary 
-def convertToDict(userDataLine):
-    dataTypes = ['nickname', 'name', 'bread box purchases', 'bread box', 'butter', 'butter purchases', 'butter life', 'donations', 'gg avail guesses', 'gg cooldown', 'gg active', 'gg answer', 'gg wins', 'ticket list', 'num tickets', 'citygame cooldown', 'citygame answer', 'flaggame cooldown', 'flaggame answer', 'daily bakes', 'bakes', 'timeout', 'id', 'bread']
-    userIndex = 0
-    line = userDataLine.split(',')
-    userData = {}
-    for i in line:
-        try:
-            val = line[userIndex]
-            userData[dataTypes[userIndex]] = val
-        except:
-            print("error creating the user dictionary in DatabaseOperations.convertToDict() for " + userData['name'])
-        userIndex += 1
-    
-    return userData
 
 
 def searchUserByNickname(nickname):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
+    """
+    Check database only for nickname
+    
+    param: string
+    returns the user's data as a dict if found, else, returns empty dict
+    """
+    data = getDatabase()
         
     userData = {}
-    
-    for i in range(0, len(data) - 1):
-        dataLine = convertToDict(data[i]) #get ID of the current line
-        if (str(nickname).lower() == dataLine['nickname'].lower()):
-            userData = dataLine
+    keys = list(data.keys())
+    for id in keys:
+        if (str(nickname).lower() == data[id]['nickname'].lower()):
+            userData = data[id]
 
     return userData
 
 def searchUserByUsername(username):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
+    """
+    Check database only for username
+    
+    param: string (discord username e.g.: The Baker#0001)
+    returns the user's data as a dict if found, else, returns empty dict
+    """
+    data = getDatabase()
         
     userData = {}
-    
-    for i in range(0, len(data) - 1):
-        dataLine = convertToDict(data[i]) #get ID of the current line
-        if (str(username).lower() == dataLine['name'].lower()):
-            userData = dataLine
+    keys = list(data.keys())
+    for id in keys:
+        if (str(nickname).lower() == data[id]['name'].lower()):
+            userData = data[id]
 
     return userData
 
+
 def searchUser(username):
-    with open('UserDatabase.txt', 'r') as file: #read the database file
-        data = file.readlines()
-        
-    userData = {}
-    found = False
+    """
+    Check if the string username is equal to (not case sensitive) a username or nickname in the database
     
-    for i in range(0, len(data) - 1):
-        dataLine = convertToDict(data[i]) #get ID of the current line
-        if (str(username).lower() == dataLine['name'].lower()):
-            userData = dataLine
+    param: string
+    returns that user's data as a dict and found as True if found, if not, the dict is empty and found is False
+    """
+    data = getDatabase()
+    
+    found = False
+    userData = {}
+    keys = list(data.keys())
+    
+    for id in keys:
+        if (str(username).lower() == data[id]['nickname'].lower() or str(username).lower() == data[id]['name'].lower()):
+            userData = data[id]
             found = True
-        elif (str(username).lower() == dataLine['nickname'].lower()):
-            userData = dataLine
-            found = True
-            
+
     return userData, found
+    
+
+
+def looseSearch(username):
+    """
+    Check if the string username is found anywhere in the database, checking
+    nicknames and usernames using the find() function
+    
+    param: string
+    returns that user's data as a dictionary, and the whether it was found as a bool
+    """
+    data = getDatabase()
+    
+    found = False
+    userData = {}
+    keys = list(data.keys())
+    
+    for id in keys:
+        if (data[id]['name'].lower().find(str(username).lower()) != -1 or data[id]['nickname'].lower().find(str(username).lower()) != -1):
+            userData = data[id]
+            found = True
+
+    return userData, found
+
+
